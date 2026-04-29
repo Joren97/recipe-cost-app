@@ -34,7 +34,7 @@
 
 <h2>Recipe ingredients</h2>
 
-<table>
+<table class="table">
 	<thead>
 		<tr>
 			<th>Ingredient</th>
