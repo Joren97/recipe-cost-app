@@ -19,7 +19,27 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"dist:win": "yarn build && electron-builder --win nsis"
+	},
+	"build": {
+		"appId": "be.joren97.recipecostapp",
+		"productName": "Recipe Cost App",
+		"directories": {
+			"output": "dist-electron"
+		},
+		"files": [
+			"build/**/*",
+			"electron/**/*",
+			"package.json"
+		],
+		"win": {
+			"target": "nsis"
+		},
+		"nsis": {
+			"oneClick": false,
+			"allowToChangeInstallationDirectory": true
+		}
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.4",
@@ -35,6 +55,7 @@
 		"concurrently": "^9.2.1",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
+		"electron-builder": "^26.8.1",
 		"eslint": "^10.2.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.0",
