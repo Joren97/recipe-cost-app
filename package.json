@@ -73,6 +73,6 @@
 		"electron": "^41.3.0"
 	},
 	"dependencies": {
-		"better-sqlite3": "^12.9.0",
+		"better-sqlite3": "^12.9.0"
 	}
 }
