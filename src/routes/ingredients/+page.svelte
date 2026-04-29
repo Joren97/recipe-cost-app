@@ -1,57 +1,38 @@
+<!-- src/routes/ingredients/+page.svelte -->
 <script lang="ts">
-	let ingredients = [];
-	let categories = [];
-
-	let name = '';
-	let category_id = '';
-	let package_amount = 1000;
-	let package_unit = 'g';
-	let package_price = 0;
-
-	async function load() {
-		ingredients = await window.api.listIngredients();
-		categories = await window.api.listCategories();
-	}
-
-	async function saveIngredient() {
-		await window.api.createIngredient({
-			name,
-			category_id: Number(category_id),
-			package_amount,
-			package_unit,
-			package_price
-		});
-
-		name = '';
-		package_price = 0;
-		await load();
-	}
-
-	load();
+	let { data } = $props();
 </script>
 
 <h1>Ingredients</h1>
 
-<input bind:value={name} placeholder="Ingredient name" />
+<form method="POST" action="?/create">
+	<input name="name" placeholder="Ingredient name" required />
 
-<select bind:value={category_id}>
-	<option value="">Choose category</option>
-	{#each categories as category}
-		<option value={category.id}>{category.name}</option>
-	{/each}
-</select>
+	<select name="categoryId" required>
+		{#each data.categories as category}
+			<option value={category.id}>{category.name}</option>
+		{/each}
+	</select>
 
-<input type="number" bind:value={package_amount} />
-<input bind:value={package_unit} />
-<input type="number" step="0.01" bind:value={package_price} />
+	<input name="priceEuro" type="number" step="0.01" placeholder="Price in euro" required />
+	<input name="amount" type="number" step="0.01" placeholder="Package amount" required />
 
-<button on:click={saveIngredient}>Save ingredient</button>
+	<select name="unit" required>
+		<option value="g">g</option>
+		<option value="kg">kg</option>
+		<option value="ml">ml</option>
+		<option value="l">l</option>
+		<option value="piece">piece</option>
+	</select>
+
+	<button>Add ingredient</button>
+</form>
 
 <ul>
-	{#each ingredients as ingredient}
+	{#each data.ingredients as ingredient}
 		<li>
-			{ingredient.name} — €{ingredient.package_price} /
-			{ingredient.package_amount}{ingredient.package_unit}
+			{ingredient.name} — €{(ingredient.priceCents / 100).toFixed(2)}
+			per {ingredient.amount}{ingredient.unit}
 		</li>
 	{/each}
 </ul>

@@ -15,7 +15,7 @@ To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-npx sv@0.15.1 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:forms" drizzle="database:sqlite+sqlite:better-sqlite3" --install yarn .
+npx sv@0.15.1 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:forms,typography" drizzle="database:sqlite+sqlite:better-sqlite3" --install yarn .
 ```
 
 ## Developing
