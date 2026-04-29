@@ -1,12 +1,14 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { recipeIngredients, recipes } from '$lib/server/db/schema';
+import { categories } from '$lib/server/db/schema';
 
 export const load = async () => {
+    const allCategories = await db.select().from(categories);
+
     return {
-        recipes: await db.select().from(recipes)
+        categories: allCategories
     };
 };
 
@@ -16,12 +18,12 @@ export const actions = {
         const name = String(form.get('name') ?? '').trim();
 
         if (!name) {
-            return fail(400, { message: 'Recipe name is required.' });
+            return fail(400, { message: 'Category name is required.' });
         }
 
-        const result = await db.insert(recipes).values({ name }).returning();
+        await db.insert(categories).values({ name });
 
-        throw redirect(303, `/recipes/${result[0].id}`);
+        return { success: true };
     },
 
     update: async ({ request }) => {
@@ -31,10 +33,10 @@ export const actions = {
         const name = String(form.get('name') ?? '').trim();
 
         if (!id || !name) {
-            return fail(400, { message: 'Recipe id and name are required.' });
+            return fail(400, { message: 'Category id and name are required.' });
         }
 
-        await db.update(recipes).set({ name }).where(eq(recipes.id, id));
+        await db.update(categories).set({ name }).where(eq(categories.id, id));
 
         return { success: true };
     },
@@ -44,11 +46,10 @@ export const actions = {
         const id = Number(form.get('id'));
 
         if (!id) {
-            return fail(400, { message: 'Missing recipe id.' });
+            return fail(400, { message: 'Missing category id.' });
         }
 
-        await db.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, id));
-        await db.delete(recipes).where(eq(recipes.id, id));
+        await db.delete(categories).where(eq(categories.id, id));
 
         return { success: true };
     }
