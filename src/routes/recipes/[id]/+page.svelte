@@ -9,74 +9,96 @@
 			ingredient.name.toLowerCase().includes(search.toLowerCase())
 		)
 	);
+
+	function vatPriceCents(priceVatExclusiveCents: number, vatPercentage: number) {
+		return Math.round(priceVatExclusiveCents * (vatPercentage / 100));
+	}
+
+	function priceVatInclusiveCents(priceVatExclusiveCents: number, vatPercentage: number) {
+		return priceVatExclusiveCents + vatPriceCents(priceVatExclusiveCents, vatPercentage);
+	}
+
+	function euro(cents: number) {
+		return `€${(cents / 100).toFixed(2)}`;
+	}
 </script>
 
 <svelte:head>
-	<title>{data.recipe?.name ?? 'Recipe'}</title>
+	<title>{data.recipe?.name ?? 'Recept'}</title>
 </svelte:head>
 
-<section class="">
+<section class="flex flex-col gap-8">
 	<header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 		<div class="space-y-2">
-			<a href="/recipes" class="text-sm opacity-60 hover:opacity-100">← Back to recipes</a>
-			<p class="text-sm font-medium tracking-wide uppercase opacity-60">Recipe costing</p>
+			<a href="/recipes" class="text-sm opacity-60 hover:opacity-100">← Terug naar recepten</a>
+			<p class="text-sm font-medium tracking-wide uppercase opacity-60">Recept kostprijs</p>
 			<h1 class="h1">{data.recipe?.name}</h1>
+
+			{#if data.recipe?.categoryName}
+				<span class="preset-tonal-primary-500 badge">{data.recipe.categoryName}</span>
+			{/if}
 		</div>
 
 		<div class="card p-5 text-right">
-			<p class="text-sm opacity-60">Total cost</p>
-			<p class="text-3xl font-bold">€{(data.totalCents / 100).toFixed(2)}</p>
+			<p class="text-sm opacity-60">Totale kostprijs</p>
+			<p class="text-3xl font-bold">{euro(data.totalCents)}</p>
 		</div>
 	</header>
 
 	<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
 		<div class="h-fit card p-6">
 			<div class="mb-6 space-y-1">
-				<h2 class="h3">Add ingredient</h2>
-				<p class="text-sm opacity-60">Search for an ingredient and add the amount used.</p>
+				<h2 class="h3">Ingrediënt toevoegen</h2>
+				<p class="text-sm opacity-60">Zoek een ingrediënt en voeg de gebruikte hoeveelheid toe.</p>
 			</div>
 
 			<div class="mb-4">
 				<label class="label">
-					<span>Search</span>
-					<input class="input" bind:value={search} placeholder="Search ingredient..." />
+					<span>Zoeken</span>
+					<input class="input" bind:value={search} placeholder="Zoek ingrediënt..." />
 				</label>
 			</div>
 
 			<form method="POST" action="?/addIngredient" class="flex flex-col gap-4">
 				<label class="label">
-					<span>Ingredient</span>
+					<span>Ingrediënt</span>
 					<select class="select" name="ingredientId" required>
-						{#each filteredIngredients as ingredient}
+						{#each filteredIngredients as ingredient (ingredient.id)}
 							<option value={ingredient.id}>
-								{ingredient.name} — €{(ingredient.priceCents / 100).toFixed(2)}
-								per {ingredient.amount}{ingredient.unit}
+								{ingredient.name} —
+								{euro(
+									priceVatInclusiveCents(
+										ingredient.priceVatExclusiveCents,
+										ingredient.vatPercentage
+									)
+								)}
+								incl. btw per {ingredient.amount}{ingredient.unit}
 							</option>
 						{/each}
 					</select>
 				</label>
 
 				<label class="label">
-					<span>Amount used</span>
+					<span>Gebruikte hoeveelheid</span>
 					<input
 						class="input"
 						name="amount"
 						type="number"
 						step="0.01"
-						placeholder="Example: 250"
+						placeholder="Bijv.: 250"
 						required
 					/>
 				</label>
 
-				<button class="btn preset-filled-primary-500" type="submit"> Add ingredient </button>
+				<button class="btn preset-filled-primary-500" type="submit"> Ingrediënt toevoegen </button>
 			</form>
 		</div>
 
 		<div class="overflow-hidden card">
 			<div class="border-surface-200-800-token flex items-center justify-between border-b p-4">
 				<div>
-					<h2 class="h3">Recipe ingredients</h2>
-					<p class="text-sm opacity-60">Ingredients currently used in this recipe.</p>
+					<h2 class="h3">Receptingrediënten</h2>
+					<p class="text-sm opacity-60">Ingrediënten die momenteel in dit recept zitten.</p>
 				</div>
 
 				<span class="preset-tonal-primary-500 badge">
@@ -90,22 +112,29 @@
 					<table class="table">
 						<thead>
 							<tr>
-								<th>Ingredient</th>
-								<th>Amount</th>
-								<th>Cost</th>
-								<th class="text-right">Action</th>
+								<th>Ingrediënt</th>
+								<th>Hoeveelheid</th>
+								<th>Prijs incl. btw</th>
+								<th>Btw %</th>
+								<th>Kostprijs</th>
+								<th class="text-right">Actie</th>
 							</tr>
 						</thead>
+
 						<tbody>
-							{#each data.recipeItems as item}
+							{#each data.recipeItems as item (item.id)}
 								<tr>
 									<td class="font-medium">{item.ingredientName}</td>
 									<td>{item.amount}{item.unit}</td>
-									<td>€{(item.lineCostCents / 100).toFixed(2)}</td>
+									<td>{euro(item.priceVatInclusiveCents)}</td>
+									<td>{item.vatPercentage}%</td>
+									<td>{euro(item.lineCostCents)}</td>
 									<td class="text-right">
 										<form method="POST" action="?/removeIngredient">
 											<input type="hidden" name="id" value={item.id} />
-											<button class="preset-tonal-error-500 btn" type="submit"> Remove </button>
+											<button class="preset-tonal-error-500 btn" type="submit">
+												Verwijderen
+											</button>
 										</form>
 									</td>
 								</tr>
@@ -115,16 +144,16 @@
 				</div>
 			{:else}
 				<div class="p-8 text-center">
-					<p class="font-medium">No ingredients yet</p>
+					<p class="font-medium">Nog geen ingrediënten</p>
 					<p class="mt-1 text-sm opacity-60">
-						Add the first ingredient using the form on the left.
+						Voeg het eerste ingrediënt toe via het formulier links.
 					</p>
 				</div>
 			{/if}
 
 			<div class="border-surface-200-800-token flex items-center justify-end gap-4 border-t p-4">
-				<span class="text-sm opacity-60">Total</span>
-				<span class="text-2xl font-bold">€{(data.totalCents / 100).toFixed(2)}</span>
+				<span class="text-sm opacity-60">Totaal</span>
+				<span class="text-2xl font-bold">{euro(data.totalCents)}</span>
 			</div>
 		</div>
 	</div>

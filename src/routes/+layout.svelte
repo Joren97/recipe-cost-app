@@ -4,13 +4,7 @@
 
 	let { children } = $props();
 
-	import {
-		SettingsIcon,
-		SkullIcon,
-		MilkIcon,
-		BookOpenTextIcon,
-		FolderKanbanIcon
-	} from '@lucide/svelte';
+	import { MilkIcon, BookOpenTextIcon, FolderKanbanIcon } from '@lucide/svelte';
 	import { Navigation } from '@skeletonlabs/skeleton-svelte';
 
 	const links = [
@@ -18,9 +12,23 @@
 		{ label: 'Recepten', href: '/recipes', icon: BookOpenTextIcon },
 		{ label: 'Categorieën', href: '/categories', icon: FolderKanbanIcon }
 	];
+	import { Toast } from '@skeletonlabs/skeleton-svelte';
+	import { toaster } from '$lib/components/toaster';
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
+
+<Toast.Group {toaster}>
+	{#snippet children(toast)}
+		<Toast {toast}>
+			<Toast.Message>
+				<Toast.Title>{toast.title}</Toast.Title>
+				<Toast.Description>{toast.description}</Toast.Description>
+			</Toast.Message>
+			<Toast.CloseTrigger />
+		</Toast>
+	{/snippet}
+</Toast.Group>
 
 <div class="grid h-dvh w-full grid-cols-[auto_1fr] border border-surface-200-800">
 	<!-- --- -->
@@ -50,6 +58,5 @@
 	<!-- --- -->
 	<div class="p-6">
 		{@render children()}
-		<p class="opacity-50">Contents</p>
 	</div>
 </div>

@@ -2,36 +2,51 @@
 	let { data } = $props();
 
 	let editingId = $state<number | null>(null);
+	import { PencilIcon, Trash2Icon } from '@lucide/svelte';
+
+	function vatPriceCents(priceVatExclusiveCents: number, vatPercentage: number) {
+		return Math.round(priceVatExclusiveCents * (vatPercentage / 100));
+	}
+
+	function priceVatInclusiveCents(priceVatExclusiveCents: number, vatPercentage: number) {
+		return priceVatExclusiveCents + vatPriceCents(priceVatExclusiveCents, vatPercentage);
+	}
+
+	function euro(cents: number) {
+		return `€${(cents / 100).toFixed(2)}`;
+	}
 </script>
 
 <svelte:head>
-	<title>Ingredients</title>
+	<title>Ingrediënten</title>
 </svelte:head>
 
 <section class="">
 	<header class="space-y-2">
-		<p class="text-sm font-medium tracking-wide uppercase opacity-60">Recipe costing</p>
-		<h1 class="h1">Ingredients</h1>
-		<p class="opacity-70">Manage your ingredient prices, package amounts, and units.</p>
+		<p class="text-sm font-medium tracking-wide uppercase opacity-60">Recept kostprijs</p>
+		<h1 class="h1">Ingrediënten</h1>
+		<p class="opacity-70">Beheer je ingrediëntprijzen, verpakkingshoeveelheden en eenheden.</p>
 	</header>
 
 	<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
 		<div class="h-fit card p-6">
 			<div class="mb-6 space-y-1">
-				<h2 class="h3">Add ingredient</h2>
-				<p class="text-sm opacity-60">Create a priced ingredient linked to a category.</p>
+				<h2 class="h3">Ingrediënt toevoegen</h2>
+				<p class="text-sm opacity-60">
+					Maak een ingrediënt met prijs en koppel het aan een categorie.
+				</p>
 			</div>
 
 			<form method="POST" action="?/create" class="flex flex-col gap-4">
 				<label class="label">
-					<span>Name</span>
-					<input class="input" name="name" placeholder="Example: Flour" required />
+					<span>Naam</span>
+					<input class="input" name="name" placeholder="Bijv.: Bloem" required />
 				</label>
 
 				<label class="label">
-					<span>Category</span>
+					<span>Categorie</span>
 					<select class="select" name="categoryId" required>
-						{#each data.categories as category}
+						{#each data.categories as category (category.id)}
 							<option value={category.id}>{category.name}</option>
 						{/each}
 					</select>
@@ -39,41 +54,53 @@
 
 				<div class="grid gap-4 sm:grid-cols-2">
 					<label class="label">
-						<span>Price in euro</span>
-						<input class="input" name="priceEuro" type="number" step="0.01" required />
+						<span>Prijs excl. btw</span>
+						<input class="input" name="priceVatExclusiveEuro" type="number" step="0.01" required />
 					</label>
 
 					<label class="label">
-						<span>Package amount</span>
+						<span>Btw-percentage</span>
+						<input
+							class="input"
+							name="vatPercentage"
+							type="number"
+							step="0.01"
+							value="6"
+							required
+						/>
+					</label>
+
+					<label class="label">
+						<span>Verpakkingshoeveelheid</span>
 						<input class="input" name="amount" type="number" step="0.01" required />
 					</label>
 				</div>
 
 				<label class="label">
-					<span>Unit</span>
+					<span>Eenheid</span>
 					<select class="select" name="unit" required>
 						<option value="g">g</option>
 						<option value="kg">kg</option>
 						<option value="ml">ml</option>
 						<option value="l">l</option>
-						<option value="piece">piece</option>
+						<option value="piece">stuk</option>
 					</select>
 				</label>
 
-				<button class="btn preset-filled-primary-500" type="submit"> Add ingredient </button>
+				<button class="btn preset-filled-primary-500" type="submit"> Ingrediënt toevoegen </button>
 			</form>
 		</div>
 
 		<div class="overflow-hidden card">
 			<div class="border-surface-200-800-token flex items-center justify-between border-b p-4">
 				<div>
-					<h2 class="h3">All ingredients</h2>
-					<p class="text-sm opacity-60">Edit or remove existing ingredients.</p>
+					<h2 class="h3">Alle ingrediënten</h2>
+					<p class="text-sm opacity-60">Bewerk of verwijder bestaande ingrediënten.</p>
 				</div>
 
 				<span class="preset-tonal-primary-500 badge">
 					{data.ingredients.length}
-					{data.ingredients.length === 1 ? 'ingredient' : 'ingredients'}
+					{data.ingredients.length === 1 ? 'ingrediënt' : 'ingrediënten'}
 				</span>
 			</div>
 
@@ -82,16 +109,19 @@
 					<table class="table">
 						<thead>
 							<tr>
-								<th>Ingredient</th>
-								<th>Price</th>
-								<th>Package</th>
-								<th>Unit price</th>
-								<th class="text-right">Actions</th>
+								<th>Naam</th>
+								<th>Prijs excl. btw</th>
+								<th>Btw %</th>
+								<th>Btw-bedrag</th>
+								<th>Prijs incl. btw</th>
+								<th>Verpakking</th>
+								<th>Eenheidsprijs incl. btw</th>
+								<th></th>
 							</tr>
 						</thead>
 
 						<tbody>
-							{#each data.ingredients as ingredient}
+							{#each data.ingredients as ingredient (ingredient.id)}
 								{#if editingId === ingredient.id}
 									<tr>
 										<td colspan="5">
@@ -103,14 +133,14 @@
 												<input type="hidden" name="id" value={ingredient.id} />
 
 												<label class="label lg:col-span-2">
-													<span>Name</span>
+													<span>Naam</span>
 													<input class="input" name="name" value={ingredient.name} required />
 												</label>
 
 												<label class="label">
-													<span>Category</span>
+													<span>Categorie</span>
 													<select class="select" name="categoryId" required>
-														{#each data.categories as category}
+														{#each data.categories as category (category.id)}
 															<option
 																value={category.id}
 																selected={category.id === ingredient.categoryId}
@@ -122,19 +152,31 @@
 												</label>
 
 												<label class="label">
-													<span>Price</span>
+													<span>Prijs excl. btw</span>
 													<input
 														class="input"
-														name="priceEuro"
+														name="priceVatExclusiveEuro"
 														type="number"
 														step="0.01"
-														value={(ingredient.priceCents / 100).toFixed(2)}
+														value={(ingredient.priceVatExclusiveCents / 100).toFixed(2)}
 														required
 													/>
 												</label>
 
 												<label class="label">
-													<span>Amount</span>
+													<span>Btw %</span>
+													<input
+														class="input"
+														name="vatPercentage"
+														type="number"
+														step="0.01"
+														value={ingredient.vatPercentage}
+														required
+													/>
+												</label>
+
+												<label class="label">
+													<span>Hoeveelheid</span>
 													<input
 														class="input"
 														name="amount"
@@ -146,21 +188,21 @@
 												</label>
 
 												<label class="label">
-													<span>Unit</span>
+													<span>Eenheid</span>
 													<select class="select" name="unit" required>
 														<option value="g" selected={ingredient.unit === 'g'}>g</option>
 														<option value="kg" selected={ingredient.unit === 'kg'}>kg</option>
 														<option value="ml" selected={ingredient.unit === 'ml'}>ml</option>
 														<option value="l" selected={ingredient.unit === 'l'}>l</option>
 														<option value="piece" selected={ingredient.unit === 'piece'}>
-															piece
+															stuk
 														</option>
 													</select>
 												</label>
 
 												<div class="flex items-end gap-2 lg:col-span-6">
 													<button class="btn preset-filled-primary-500" type="submit">
-														Save changes
+														Opslaan
 													</button>
 
 													<button
@@ -168,7 +210,7 @@
 														type="button"
 														onclick={() => (editingId = null)}
 													>
-														Cancel
+														Annuleren
 													</button>
 												</div>
 											</form>
@@ -177,25 +219,55 @@
 								{:else}
 									<tr>
 										<td class="font-medium">{ingredient.name}</td>
-										<td>€{(ingredient.priceCents / 100).toFixed(2)}</td>
+										<td>{euro(ingredient.priceVatExclusiveCents)}</td>
+										<td>{ingredient.vatPercentage}%</td>
+										<td
+											>{euro(
+												vatPriceCents(ingredient.priceVatExclusiveCents, ingredient.vatPercentage)
+											)}</td
+										>
+										<td
+											>{euro(
+												priceVatInclusiveCents(
+													ingredient.priceVatExclusiveCents,
+													ingredient.vatPercentage
+												)
+											)}</td
+										>
 										<td>{ingredient.amount}{ingredient.unit}</td>
 										<td>
-											€{(ingredient.priceCents / ingredient.amount / 100).toFixed(4)}
+											€{(
+												priceVatInclusiveCents(
+													ingredient.priceVatExclusiveCents,
+													ingredient.vatPercentage
+												) /
+												ingredient.amount /
+												100
+											).toFixed(4)}
 											/ {ingredient.unit}
 										</td>
 										<td>
 											<div class="flex justify-end gap-2">
 												<button
-													class="preset-tonal-primary-500 btn"
 													type="button"
+													class="btn-icon preset-filled-warning-500"
+													title="Bewerken"
+													aria-label="Bewerken"
 													onclick={() => (editingId = ingredient.id)}
 												>
-													Edit
+													<PencilIcon />
 												</button>
 
 												<form method="POST" action="?/remove">
 													<input type="hidden" name="id" value={ingredient.id} />
-													<button class="preset-tonal-error-500 btn" type="submit"> Remove </button>
+													<button
+														type="submit"
+														class="btn-icon preset-filled-error-500"
+														title="Verwijderen"
+														aria-label="Verwijderen"
+													>
+														<Trash2Icon />
+													</button>
 												</form>
 											</div>
 										</td>
@@ -207,9 +279,9 @@
 				</div>
 			{:else}
 				<div class="p-8 text-center">
-					<p class="font-medium">No ingredients yet</p>
+					<p class="font-medium">Nog geen ingrediënten</p>
 					<p class="mt-1 text-sm opacity-60">
-						Add your first ingredient using the form on the left.
+						Voeg je eerste ingrediënt toe via het formulier links.
 					</p>
 				</div>
 			{/if}

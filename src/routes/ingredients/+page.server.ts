@@ -2,10 +2,10 @@ import { fail } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { categories, ingredients } from '$lib/server/db/schema';
+import { ingredientCategories, ingredients } from '$lib/server/db/schema';
 
 export const load = async () => {
-    const allCategories = await db.select().from(categories);
+    const allCategories = await db.select().from(ingredientCategories);
     const allIngredients = await db.select().from(ingredients);
 
     return {
@@ -20,18 +20,20 @@ export const actions = {
 
         const name = String(form.get('name') ?? '').trim();
         const categoryId = Number(form.get('categoryId'));
-        const priceEuro = Number(form.get('priceEuro'));
         const amount = Number(form.get('amount'));
         const unit = String(form.get('unit') ?? '').trim();
+        const priceVatExclusiveEuro = Number(form.get('priceVatExclusiveEuro'));
+        const vatPercentage = Number(form.get('vatPercentage'));
 
-        if (!name || !categoryId || !priceEuro || !amount || !unit) {
-            return fail(400, { message: 'Please fill in all fields.' });
+        if (!name || !categoryId || Number.isNaN(priceVatExclusiveEuro) || Number.isNaN(vatPercentage) || !amount || !unit) {
+            return fail(400, { message: 'Vul alle velden in.' });
         }
 
         await db.insert(ingredients).values({
             name,
             categoryId,
-            priceCents: Math.round(priceEuro * 100),
+            priceVatExclusiveCents: Math.round(priceVatExclusiveEuro * 100),
+            vatPercentage,
             amount,
             unit
         });
@@ -45,12 +47,13 @@ export const actions = {
         const id = Number(form.get('id'));
         const name = String(form.get('name') ?? '').trim();
         const categoryId = Number(form.get('categoryId'));
-        const priceEuro = Number(form.get('priceEuro'));
         const amount = Number(form.get('amount'));
         const unit = String(form.get('unit') ?? '').trim();
+        const priceVatExclusiveEuro = Number(form.get('priceVatExclusiveEuro'));
+        const vatPercentage = Number(form.get('vatPercentage'));
 
-        if (!id || !name || !categoryId || !priceEuro || !amount || !unit) {
-            return fail(400, { message: 'Please fill in all fields.' });
+        if (!name || !categoryId || Number.isNaN(priceVatExclusiveEuro) || Number.isNaN(vatPercentage) || !amount || !unit) {
+            return fail(400, { message: 'Vul alle velden in.' });
         }
 
         await db
@@ -58,7 +61,8 @@ export const actions = {
             .set({
                 name,
                 categoryId,
-                priceCents: Math.round(priceEuro * 100),
+                priceVatExclusiveCents: Math.round(priceVatExclusiveEuro * 100),
+                vatPercentage,
                 amount,
                 unit
             })

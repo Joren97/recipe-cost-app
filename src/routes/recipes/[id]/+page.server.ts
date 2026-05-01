@@ -1,23 +1,48 @@
 // src/routes/recipes/[id]/+page.server.ts
+import { fail } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
+
 import { db } from '$lib/server/db';
 import {
-    recipes,
     ingredients,
-    recipeIngredients
+    recipeCategories,
+    recipeIngredients,
+    recipes
 } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
-import { fail } from '@sveltejs/kit';
 
-function calculateLineCostCents(recipeAmount: number, packageAmount: number, priceCents: number) {
-    return Math.round((recipeAmount / packageAmount) * priceCents);
+function vatPriceCents(priceVatExclusiveCents: number, vatPercentage: number) {
+    return Math.round(priceVatExclusiveCents * (vatPercentage / 100));
+}
+
+function priceVatInclusiveCents(priceVatExclusiveCents: number, vatPercentage: number) {
+    return priceVatExclusiveCents + vatPriceCents(priceVatExclusiveCents, vatPercentage);
+}
+
+function calculateLineCostCents(
+    recipeAmount: number,
+    packageAmount: number,
+    priceVatExclusiveCents: number,
+    vatPercentage: number
+) {
+    const inclusivePriceCents = priceVatInclusiveCents(priceVatExclusiveCents, vatPercentage);
+
+    return Math.round((recipeAmount / packageAmount) * inclusivePriceCents);
 }
 
 export const load = async ({ params }) => {
     const recipeId = Number(params.id);
 
-    const recipe = await db.query.recipes.findFirst({
-        where: eq(recipes.id, recipeId)
-    });
+    const recipe = await db
+        .select({
+            id: recipes.id,
+            name: recipes.name,
+            categoryId: recipes.categoryId,
+            categoryName: recipeCategories.name
+        })
+        .from(recipes)
+        .innerJoin(recipeCategories, eq(recipes.categoryId, recipeCategories.id))
+        .where(eq(recipes.id, recipeId))
+        .get();
 
     const allIngredients = await db.select().from(ingredients);
 
@@ -29,7 +54,8 @@ export const load = async ({ params }) => {
             ingredientName: ingredients.name,
             packageAmount: ingredients.amount,
             unit: ingredients.unit,
-            priceCents: ingredients.priceCents
+            priceVatExclusiveCents: ingredients.priceVatExclusiveCents,
+            vatPercentage: ingredients.vatPercentage
         })
         .from(recipeIngredients)
         .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
@@ -37,10 +63,16 @@ export const load = async ({ params }) => {
 
     const recipeItems = rows.map((row) => ({
         ...row,
+        vatPriceCents: vatPriceCents(row.priceVatExclusiveCents, row.vatPercentage),
+        priceVatInclusiveCents: priceVatInclusiveCents(
+            row.priceVatExclusiveCents,
+            row.vatPercentage
+        ),
         lineCostCents: calculateLineCostCents(
             row.amount,
             row.packageAmount,
-            row.priceCents
+            row.priceVatExclusiveCents,
+            row.vatPercentage
         )
     }));
 
@@ -63,7 +95,7 @@ export const actions = {
         const amount = Number(form.get('amount'));
 
         if (!recipeId || !ingredientId || !amount) {
-            return fail(400, { message: 'Missing ingredient or amount' });
+            return fail(400, { message: 'Ingrediënt of hoeveelheid ontbreekt.' });
         }
 
         await db.insert(recipeIngredients).values({
@@ -80,7 +112,7 @@ export const actions = {
         const id = Number(form.get('id'));
 
         if (!id) {
-            return fail(400, { message: 'Missing recipe ingredient id' });
+            return fail(400, { message: 'Receptingrediënt id ontbreekt.' });
         }
 
         await db.delete(recipeIngredients).where(eq(recipeIngredients.id, id));
